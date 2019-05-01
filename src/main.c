@@ -7,6 +7,7 @@
 #include <math.h>
 #include<signal.h>
 #define NUM_THREADS     sysconf(_SC_NPROCESSORS_ONLN)
+#define SEPERATOR "::::::::::\n"
 
 void handleSignal(int sig) 
 { 
@@ -18,6 +19,7 @@ void handleSignal(int sig)
  
   if (fp == NULL)
   {
+    printf("Foo\n");
     exit(1);
   }
 
@@ -25,12 +27,13 @@ void handleSignal(int sig)
   while((ch = fgetc(fp)) != EOF){
     printf("%c", ch);
   }
-  printf("::::::::::\n"); // Seperator for parsing
+  printf(SEPERATOR); // Seperator for parsing
   sprintf(file_name, "/proc/%d/stat", getpid());
   fp = fopen(file_name, "r"); // read mode
  
   if (fp == NULL)
   {
+    printf("Foo\n");
     exit(1);
   }
 
@@ -38,18 +41,20 @@ void handleSignal(int sig)
     printf("%c", ch);
   }
 
-  printf("::::::::::\n");
+  printf(SEPERATOR);
   sprintf(file_name, "/proc/%d/sched", getpid());
   fp = fopen(file_name, "r"); // read mode
  
   if (fp == NULL)
   {
+    printf("Foo\n");
     exit(1);
   }
 
   while((ch = fgetc(fp)) != EOF){
     printf("%c", ch);
   }
+  pthread_exit(NULL);
   exit(0);
 } 
 
@@ -58,7 +63,7 @@ void *IOIntensive(void* nothing)
   FILE *file;
   file = tmpfile();
   char dummyData[] = "deadbeef";
-  for (int i = 0; i < 100; i++) {
+  while (1) {
     int n = fwrite(&dummyData, 1, 8, file);
     if (n != 8) {
       printf("Uh oh, only wrote %d\n", n);
