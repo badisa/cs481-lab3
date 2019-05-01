@@ -50,6 +50,7 @@ void handleSignal(int sig)
   while((ch = fgetc(fp)) != EOF){
     printf("%c", ch);
   }
+  exit(0);
 } 
 
 void *IOIntensive(void* nothing)
@@ -73,7 +74,7 @@ void *IOIntensive(void* nothing)
 void *CPUIntensive(void* nothing)
 {
   double pi = 0.0;
-  uint64_t counter = 0;
+  uint counter = 0;
   while (1) {
     counter++;
     pi += 4.0 * pow(-1, (double)counter) / (double)((2*counter)+1);
@@ -98,7 +99,6 @@ int main (int argc, char *argv[])
     return 1;
   }
   signal(SIGQUIT, handleSignal);
-  printf("Got args %s\n", argv[1]);
   if (strncmp(argv[1], "io", 15) == 0) {
     IOIntensive((void *) t);
   } else if (strncmp(argv[1], "cpu", 15) == 0) {
