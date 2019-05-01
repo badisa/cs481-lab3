@@ -1,0 +1,14 @@
+Gopkg.lock
+vendor/
+*.zip
+*/*.db
+.idea/*
+*.db
+asset_server
+broker
+floe_server
+local_proxy
+otop
+sched_client
+sched_server
+sched_top
