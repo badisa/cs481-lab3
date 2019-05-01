@@ -8,8 +8,13 @@
 #include<signal.h>
 #define NUM_THREADS     sysconf(_SC_NPROCESSORS_ONLN)
 #define SEPERATOR "::::::::::\n"
+#define OFFSET 20000
 
-void handleSignal(int sig) 
+
+FILE *filePtr;
+pthread_mutex_t lock;
+
+void printSchedulerInfo() 
 { 
   FILE *fp;
 
@@ -54,37 +59,26 @@ void handleSignal(int sig)
   while((ch = fgetc(fp)) != EOF){
     printf("%c", ch);
   }
-  pthread_exit(NULL);
   exit(0);
-} 
-
-void *IOIntensive(void* nothing)
-{
-  FILE *file;
-  file = tmpfile();
-  char dummyData[] = "deadbeef";
-  while (1) {
-    int n = fwrite(&dummyData, 1, 8, file);
-    if (n != 8) {
-      printf("Uh oh, only wrote %d\n", n);
-    }
-    fflush(file);
-    fseek(file, -3, SEEK_CUR);
-    fseek(file, 4096 * 1024 * 5, SEEK_CUR);
-  }
-  fclose(file);
-  return nothing;
 }
 
-void *CPUIntensive(void* nothing)
+
+  uint counter;
+
+void *writePiToDisk(void* counter)
 {
   double pi = 0.0;
-  uint counter = 0;
-  while (1) {
-    counter++;
-    pi += 4.0 * pow(-1, (double)counter) / (double)((2*counter)+1);
+  uint start = 0;
+  long realCounter = (long)&counter;
+  while (start < OFFSET) {
+    realCounter++;
+    start++;
+    pi += 4.0 * pow(-1, (double)realCounter) / (double)((2*realCounter)+1);
   }
-  return nothing;
+  pthread_mutex_lock(&lock);
+  fprintf(filePtr, "%.g\n", pi);
+  pthread_mutex_unlock(&lock);
+  return NULL;
 }
 
 void joinThreads(pthread_t threads[]) {
@@ -98,59 +92,39 @@ int main (int argc, char *argv[])
 {
   pthread_t threads[NUM_THREADS];
   int rc;
+  int i;
   long t;
+  if (pthread_mutex_init(&lock, NULL) != 0) {
+    printf("Failed to initialize lock\n");
+    return 1;
+  }
   if (argc != 2) {
     printf("Must provide two arguments\n");
     return 1;
   }
-  signal(SIGQUIT, handleSignal);
-  if (strncmp(argv[1], "io", 15) == 0) {
-    IOIntensive((void *) t);
-  } else if (strncmp(argv[1], "cpu", 15) == 0) {
-    CPUIntensive((void *) t);
-  } else if (strncmp(argv[1], "mixed-threaded", 15) == 0) {
-    for(t=0; t<NUM_THREADS; t++){
-      if (t % 2 == 0) {
-        rc = pthread_create(&threads[t], NULL, IOIntensive, (void *) t);  
-      } else {
-        rc = pthread_create(&threads[t], NULL, CPUIntensive, (void *) t);
-      }
-      if (rc){
-        printf("ERROR; return code from pthread_create() is %d\n", rc);
-        return 1;
-      }
-    }
-    joinThreads(threads);
-  } else if (strncmp(argv[1], "io-threaded", 15) == 0) {
-    for(t=0; t<NUM_THREADS; t++){
-      rc = pthread_create(&threads[t], NULL, IOIntensive, (void *) t);
-      if (rc){
-        printf("ERROR; return code from pthread_create() is %d\n", rc);
-        return 1;
-      }
-    }
-    joinThreads(threads);
-  } else if (strncmp(argv[1], "cpu-threaded", 15) == 0) {
-    for(t=0; t<NUM_THREADS; t++){
-      rc = pthread_create(&threads[t], NULL, CPUIntensive, (void *) t);
-      if (rc){
-        printf("ERROR; return code from pthread_create() is %d\n", rc);
-        return 1;
-      }
-    }
-    joinThreads(threads);
-  } else {
-    for(t=0; t<NUM_THREADS; t++){
-      rc = pthread_create(&threads[t], NULL, IOIntensive, (void *) t);
-      if (rc){
-        printf("ERROR; return code from pthread_create() is %d\n", rc);
-        return 1;
-      }
-    }
-    joinThreads(threads);
-  }
+  filePtr = tmpfile();
+  int withThreads = strncmp(argv[1], "serial", 15);
 
+  for (i = 0; i < OFFSET; i ++) {
+    for(t=0; t<NUM_THREADS; t++){
+      if (withThreads != 0) {
+        rc = pthread_create(&threads[t], NULL, writePiToDisk, (void *)((OFFSET * i) * t));
+        if (rc){
+          printf("ERROR; return code from pthread_create() is %d\n", rc);
+          return 1;
+        }  
+      } else {
+        writePiToDisk((void *)((OFFSET * i) * t));
+      }
+    }
+    if (withThreads != 0) {
+      joinThreads(threads);
+    }
+  }
   // /* Last thing that main() should do */
   pthread_exit(NULL);
+  fflush(filePtr);
+  printf("Printing scheduler info\n");
+  printSchedulerInfo();
   return 0;
 }
