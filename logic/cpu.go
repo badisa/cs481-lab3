@@ -39,7 +39,7 @@ func DumpResults(result map[string]string, format string) {
 }
 
 func ParseSchedStat(output string) map[string]string {
-	schedstatVals := strings.Split(output, " ")
+	schedstatVals := strings.Split(strings.Trim(output, " "), " ")
 	if len(schedstatVals) != 3 {
 		fmt.Printf("Got unexpected number of values from schedstat: %d\n", len(schedstatVals))
 		os.Exit(1)

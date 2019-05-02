@@ -12,15 +12,6 @@ import (
 	"sync"
 )
 
-const (
-	PHASE_ALL   = "all"
-	PHASE_CPU   = "cpu"
-	PHASE_IO    = "io"
-	PHASE_MIXED = "mixed"
-	IO_CPU      = "io-cpu"
-	PAGE_TABLE  = "page-table"
-)
-
 type StatsData struct {
 	lock sync.RWMutex
 	data map[string][]map[string]string
@@ -62,16 +53,17 @@ func main() {
 func runProcesses(input *InputData) {
 	var wg sync.WaitGroup
 	stat := StatsData{data: make(map[string][]map[string]string, 10)}
-	fmt.Printf("Running %d Procs for in batches of %d\n", input.procs, input.batchSize)
+	fmt.Printf("Running %d Procs in batches of %d\n", input.procs, input.batchSize)
 	for i := 0; i < input.procs; i++ {
-		if i%input.batchSize == 0 {
+		if i != 0 && i%input.batchSize == 0 {
 			wg.Wait()
+			fmt.Printf("Finished %d of %d\n", i, input.procs)
 		}
 		wg.Add(1)
 		go stat.RunProcess(input.mode, &wg)
 	}
 	wg.Wait()
-	path := fmt.Sprintf("lab-3-procs-%d-batches-%d.json", input.procs, input.batchSize)
+	path := fmt.Sprintf("lab-3-mode-%s-procs-%d-batches-%d.json", input.mode, input.procs, input.batchSize)
 	err := stat.Dump(path)
 	if err != nil {
 		fmt.Printf("Failed to dump: %s\n", err)

@@ -8,7 +8,7 @@
 #include<signal.h>
 #define NUM_THREADS     sysconf(_SC_NPROCESSORS_ONLN)
 #define SEPERATOR "::::::::::\n"
-#define OFFSET 20000
+#define OFFSET 10000
 
 
 FILE *filePtr;
@@ -22,8 +22,7 @@ void printSchedulerInfo()
   sprintf(file_name, "/proc/%d/schedstat", getpid());
   fp = fopen(file_name, "r"); // read mode
  
-  if (fp == NULL)
-  {
+  if (fp == NULL) {
     printf("Foo\n");
     exit(1);
   }
@@ -122,9 +121,8 @@ int main (int argc, char *argv[])
     }
   }
   // /* Last thing that main() should do */
-  pthread_exit(NULL);
   fflush(filePtr);
-  printf("Printing scheduler info\n");
   printSchedulerInfo();
+  pthread_exit(NULL);
   return 0;
 }
